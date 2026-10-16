@@ -39,7 +39,7 @@ git clone https://github.com/sembusoft/claude_usage.git
 ```
 
 1. Server-Variante einrichten (Docker **oder** PHP).
-2. Einmalig bei Claude anmelden – jeder nutzt **sein eigenes** Abo/Login.
+2. Einmalig bei Claude anmelden – [Docker](docker/README.md#bei-claude-anmelden-einmalig) bzw. [PHP](php/README.md#2-zugangsdaten-hochladen). Jeder nutzt **sein eigenes** Abo/Login.
 3. Webseite öffnen bzw. in `tray/ClaudeUsageTray.ps1` oben `$Url` (und ggf. `$ApiPath`) eintragen.
 
 ## Sicherheit
