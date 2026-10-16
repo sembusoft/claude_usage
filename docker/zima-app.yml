@@ -1,0 +1,62 @@
+name: claude-usage
+
+services:
+  claude-usage:
+    image: localhost:5000/claude-usage:latest
+    container_name: claude-usage
+    restart: unless-stopped
+    ports:
+      - target: 8099
+        published: "8099"
+        protocol: tcp
+    environment:
+      TZ: Europe/Berlin
+      PORT: "8099"
+      POLL_SECONDS: "300"
+    volumes:
+      - type: bind
+        source: /DATA/AppData/claude-usage/data
+        target: /data/claude
+    x-casaos:
+      envs:
+        - container: PORT
+          description:
+            de_de: Port im Container – muss zum Port-Mapping passen
+            en_us: Port inside the container – must match the port mapping
+        - container: POLL_SECONDS
+          description:
+            de_de: Abrufintervall in Sekunden (min. 60)
+            en_us: Poll interval in seconds (min. 60)
+      ports:
+        - container: "8099"
+          description:
+            de_de: Webseite
+            en_us: Web UI
+      volumes:
+        - container: /data/claude
+          description:
+            de_de: Claude-Login (Token) – nicht freigeben
+            en_us: Claude login (token) – do not share
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+  main: claude-usage
+  author: Volker
+  developer: Volker
+  category: Utilities
+  title:
+    de_de: Claude Verbrauch
+    en_us: Claude Usage
+  tagline:
+    de_de: Abo-Auslastung und Reset-Zeitpunkt
+    en_us: Subscription usage and reset time
+  description:
+    de_de: Zeigt die 5-Stunden- und Wochen-Auslastung des Claude-Abos samt Reset-Countdown.
+    en_us: Shows 5-hour and weekly Claude subscription usage with reset countdown.
+  icon: http://SERVER-IP:8099/icon.svg
+  index: /
+  port_map: "8099"
+  scheme: http
+  store_app_id: claude-usage

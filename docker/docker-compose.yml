@@ -1,0 +1,16 @@
+name: claude-usage
+
+services:
+  claude-usage:
+    build: .
+    image: claude-usage:local
+    container_name: claude-usage
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8099}:${PORT:-8099}"   # Port in .env einstellen
+    environment:
+      TZ: Europe/Berlin
+      PORT: "${PORT:-8099}"
+      POLL_SECONDS: "${POLL_SECONDS:-300}"   # Abrufintervall in Sekunden (min. 60)
+    volumes:
+      - ./data:/data/claude    # Login/Token bleiben bei Updates erhalten

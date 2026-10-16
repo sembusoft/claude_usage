@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14171d">
+<title>Claude Verbrauch</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page:#14171d; --shell:#e4e1db; --shell-dark:#c9c5bd; --bezel:#11151b;
+    --lcd:#0f2238; --lcd-edge:#1d3a5c; --text:#cfe6ff; --muted:#8fb8dc;
+    --frame:#5aa7d8; --cell:#1e4f7a; --ok:#6fdc9a; --warn:#f0c04a; --bad:#ff6b5e;
+    --accent:#e07a5f;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; }
+  body { background:var(--page); display:flex; flex-direction:column; align-items:center;
+         justify-content:center; padding:16px; font-family:system-ui,sans-serif; }
+
+  .shell { width:min(100%, 540px); background:linear-gradient(160deg, var(--shell), var(--shell-dark));
+           border-radius:34px; padding:clamp(14px, 4vw, 26px);
+           box-shadow:0 18px 40px rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.6); }
+  .bezel { background:var(--bezel); border-radius:14px; padding:clamp(6px, 1.6vw, 10px); }
+  .lcd { background:radial-gradient(120% 90% at 30% 20%, #15304d, var(--lcd));
+         border:1px solid var(--lcd-edge); border-radius:6px; color:var(--text);
+         font-family:"VT323", ui-monospace, Consolas, monospace;
+         font-size:clamp(17px, 5.4vw, 29px); line-height:1;
+         padding:.8em .9em .7em; position:relative; overflow:hidden; }
+  .lcd::after { content:""; position:absolute; inset:0; pointer-events:none;
+         background:repeating-linear-gradient(0deg, rgba(0,0,0,.12) 0 1px, transparent 1px 3px); }
+
+  .title { display:flex; align-items:center; gap:.4em; font-size:1.7em; margin-bottom:.55em; }
+  .title svg { width:.85em; height:.85em; flex:none; }
+  .label { color:var(--muted); font-size:.82em; margin:.5em 0 .25em; }
+  .row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:.7em; }
+  .batt { position:relative; height:1.9em; border:3px solid var(--frame); border-radius:5px;
+          background:var(--cell); padding:3px; display:flex; gap:3px; margin-right:12px; }
+  .batt::after { content:""; position:absolute; right:-12px; top:28%; width:8px; height:44%;
+          background:var(--frame); border-radius:0 3px 3px 0; }
+  .seg { flex:1; border-radius:1px; background:transparent; }
+  .pct { font-size:1.75em; min-width:2.2em; text-align:right; }
+  .pct small { font-size:.5em; vertical-align:top; margin-left:.08em; }
+  .reset { font-size:1.45em; margin-top:.65em; }
+  .sub { color:var(--muted); font-size:.82em; margin-top:.3em; }
+  .nodata { color:var(--muted); }
+
+  footer { margin-top:14px; color:#7d8494; font-size:.85rem; text-align:center; max-width:540px; }
+  .err { color:var(--warn); }
+</style>
+</head>
+<body>
+<div class="shell"><div class="bezel"><div class="lcd" id="lcd">
+  <div class="title">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><g stroke="var(--accent)" stroke-width="3" stroke-linecap="round">
+      <line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>
+      <line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></g></svg>
+    Claude
+  </div>
+  <div id="content"><div class="nodata">Lade …</div></div>
+</div></div></div>
+<footer id="foot"></footer>
+
+<script>
+const SEGMENTS = 20;
+let last = null;
+
+const segColor = p => p >= 85 ? "var(--bad)" : p >= 60 ? "var(--warn)" : "var(--ok)";
+
+function countdown(iso) {
+  if (!iso) return "–";
+  let m = Math.max(0, Math.floor((new Date(iso) - Date.now()) / 60000));
+  const d = Math.floor(m / 1440); m %= 1440;
+  const h = Math.floor(m / 60); m %= 60;
+  return d ? `${d}d ${h}h` : `${h}h ${m}m`;
+}
+function when(iso) {
+  return iso ? new Date(iso).toLocaleString("de-DE",
+    { weekday:"short", hour:"2-digit", minute:"2-digit" }) : "–";
+}
+
+function battery(label, w) {
+  if (!w || w.utilization == null) return `<div class="label">${label}</div><div class="nodata">keine Daten</div>`;
+  const p = Math.min(100, Math.max(0, Number(w.utilization)));
+  const filled = p > 0 ? Math.max(1, Math.ceil(p / (100 / SEGMENTS))) : 0;
+  const c = segColor(p);
+  let segs = "";
+  for (let i = 0; i < SEGMENTS; i++) segs += `<span class="seg"${i < filled ? ` style="background:${c}"` : ""}></span>`;
+  return `<div class="label">${label}</div>
+    <div class="row"><div class="batt">${segs}</div>
+    <div class="pct">${Math.round(p)}<small>%</small></div></div>`;
+}
+
+function render() {
+  if (!last) return;
+  const d = last.data || {};
+  const five = d.five_hour, week = d.seven_day;
+  let html = battery("Session genutzt", five) + battery("Woche genutzt", week);
+  html += `<div class="reset">Reset in ${countdown(five && five.resets_at)}</div>`;
+  if (week && week.resets_at) html += `<div class="sub">Woche: Reset ${when(week.resets_at)}</div>`;
+  document.getElementById("content").innerHTML = html;
+
+  const at = last.data_at ? new Date(last.data_at).toLocaleTimeString("de-DE", {hour:"2-digit", minute:"2-digit"}) : "–";
+  document.getElementById("foot").innerHTML = `Stand ${at}` + (last.error ? ` · <span class="err">${last.error}</span>` : "");
+}
+
+async function load() {
+  try {
+    const r = await fetch("api/usage", { cache:"no-store" });
+    last = await r.json();
+  } catch (e) {
+    last = Object.assign({}, last || {}, { error:"Server nicht erreichbar" });
+  }
+  render();
+}
+
+load();
+setInterval(load, 30000);
+setInterval(render, 15000);
+</script>
+</body>
+</html>

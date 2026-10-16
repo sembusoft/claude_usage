@@ -1,0 +1,25 @@
+# Zugangsdaten und Laufzeitdaten – niemals committen
+.credentials.json
+credentials.json
+*.credentials.json
+cache.json
+.lock
+*.tmp
+
+# Docker: Login-Volume
+docker/data/
+
+# PHP: alles im data-Ordner außer der Sperre
+php/data/*
+!php/data/.htaccess
+
+# Lokale Tray-Anpassungen (z. B. mit Passwort) als Kopie ablegen
+tray/*.local.ps1
+
+# System
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
